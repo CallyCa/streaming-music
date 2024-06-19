@@ -14,3 +14,7 @@ marshmallow==3.20.2
 Faker==25.8.0
 pytest==8.0.2
 python-dotenv==1.0.1
+graphene
+flask-graphql
+graphene_sqlalchemy
+graphql-core==2.3.2
