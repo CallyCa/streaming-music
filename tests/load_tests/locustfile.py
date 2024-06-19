@@ -6,6 +6,7 @@ import random
 from faker import Faker
 from locust import HttpUser, TaskSet, task, between
 
+from tests.load_tests.locust_graphql import LocustGraphQL
 from tests.load_tests.locust_rest import LocustREST
 
 
@@ -22,6 +23,8 @@ class UserBehavior(TaskSet):
         api_type = os.getenv("API_TYPE")
         if api_type == "REST":
             self.api_client = LocustREST(self.client)
+        elif api_type == "GraphQL":
+            self.api_client = LocustGraphQL(self.client)
 
     def on_start(self):
         """Será executado quando o locust iniciar."""
@@ -34,7 +37,7 @@ class UserBehavior(TaskSet):
         self.email = self.faker.email()
         self.password = self.faker.password()
         response = self.api_client.register(self.name, self.email, self.password)
-        if response.status_code == 201:
+        if response.status_code == 200 or response.status_code == 201:
             self.logger.info("Usuário registrado com sucesso!")
         else:
             self.logger.info("Erro ao registrar o usuário.")
@@ -43,7 +46,12 @@ class UserBehavior(TaskSet):
         """Fazer login com o usuário registrado."""
         response = self.api_client.login(self.email, self.password)
         if response.status_code == 200:
-            token = response.json()["access_token"]
+            if "access_token" in response.json():
+                token = response.json()["access_token"]
+            elif "data" in response.json():
+                token = response.json()["data"]["loginUser"]["accessToken"]
+            else:
+                token = None
             self.client.headers.update({"Authorization": f"Bearer {token}"})
             self.logger.info("Login realizado com sucesso!")
         else:

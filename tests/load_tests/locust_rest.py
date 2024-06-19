@@ -1,17 +1,8 @@
-import logging
-
-from locust.clients import HttpSession
+from tests.load_tests.locust_api import LocustAPI
 
 
-class LocustREST:
+class LocustREST(LocustAPI):
     """Cliente REST para o Locust"""
-
-    def __init__(self, client: HttpSession):
-        """
-        :param client: O cliente do TaskSet do locust
-        """
-        self.client = client
-        self.logger = logging.getLogger("locust_rest")
 
     def register(self, name, email, password):
         return self.client.post("/register", json={
