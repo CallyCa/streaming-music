@@ -5,6 +5,14 @@ from extensions.extensions import db, migrate
 from flasgger import Swagger
 from flask_jwt_extended import JWTManager
 from logs.logging_config import logger
+# REST
+from routes.rest.users_routes import users_bp
+from routes.rest.songs_routes import songs_bp
+from routes.rest.playlists_routes import playlists_bp
+from routes.rest.auth_routes import auth_bp
+# GRAPHQL
+from flask_graphql import GraphQLView
+from routes.graphql.schema import schema
 
 # Importar a configuração do Swagger e os manipuladores de erro
 from swagger.swagger_config import swagger_config, swagger_template
@@ -34,12 +42,7 @@ def create_app(config_name=None):
     jwt = JWTManager(app)
 
     with app.app_context():
-        # Importar rotas usando Blueprints
-        from routes.users_routes import users_bp
-        from routes.songs_routes import songs_bp
-        from routes.playlists_routes import playlists_bp
-        from routes.auth_routes import auth_bp
-
+        # Importar rotas usando Blueprints REST
         app.register_blueprint(users_bp)
         app.register_blueprint(songs_bp)
         app.register_blueprint(playlists_bp)
@@ -49,6 +52,26 @@ def create_app(config_name=None):
 
     # Importar manipuladores de erro
     register_error_handlers(app)
+
+    # Adicionando o endpoint GraphQL
+    app.add_url_rule(
+        '/graphql',
+        view_func=GraphQLView.as_view(
+            'graphql',
+            schema=schema,
+            graphiql=False  # desativa a interface do GraphiQL aqui
+        )
+    )
+
+    # Adicionando um endpoint separado para a interface do GraphiQL
+    app.add_url_rule(
+        '/graphiql',
+        view_func=GraphQLView.as_view(
+            'graphiql',
+            schema=schema,
+            graphiql=True  # habilita a interface do GraphiQL aqui
+        )
+    )
 
     @app.route('/')
     def index():
