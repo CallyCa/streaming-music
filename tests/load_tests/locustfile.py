@@ -1,27 +1,29 @@
 # locustfile.py
-
+from faker import Faker
 from locust import HttpUser, TaskSet, task, between
-import random
-import string
+
 
 class UserBehavior(TaskSet):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.faker = Faker("pt_BR")
+        self.name = None
+        self.email = None
+        self.password = None
 
     def on_start(self):
         """Será executado quando o locust iniciar."""
         self.register()
         self.login()
 
-    def random_string(self, length=10):
-        """Gerar uma string aleatória de caracteres alfanuméricos."""
-        letters = string.ascii_lowercase
-        return ''.join(random.choice(letters) for i in length)
-
     def register(self):
         """Registrar um novo usuário."""
-        self.email = f"{self.random_string()}@example.com"
-        self.password = self.random_string()
+        self.name = self.faker.name()
+        self.email = self.faker.email()
+        self.password = self.faker.password(length=12, special_chars=True, digits=True)
         response = self.client.post("/register", json={
-            "name": f"Locust Test {self.random_string()}",
+            "name": self.name,
             "email": self.email,
             "password": self.password
         })
@@ -37,8 +39,8 @@ class UserBehavior(TaskSet):
             "password": self.password
         })
         if response.status_code == 200:
-            self.token = response.json()["access_token"]
-            self.client.headers.update({"Authorization": f"Bearer {self.token}"})
+            token = response.json()["access_token"]
+            self.client.headers.update({"Authorization": f"Bearer {token}"})
             print("Login realizado com sucesso!")
         else:
             print("Erro ao fazer login.")
@@ -52,7 +54,7 @@ class UserBehavior(TaskSet):
     def create_playlist(self):
         """Criar uma nova playlist."""
         self.client.post("/playlists", json={
-            "name": f"Locust Playlist {self.random_string()}"
+            "name": self.faker.sentence(3)
         })
 
     @task(3)
@@ -64,10 +66,10 @@ class UserBehavior(TaskSet):
     def create_song(self):
         """Criar uma nova música."""
         self.client.post("/songs", json={
-            "title": f"Locust Song {self.random_string()}",
-            "artist": f"Locust Artist {self.random_string()}",
-            "album": f"Locust Album {self.random_string()}",
-            "duration": random.randint(200, 400)
+            "title": self.faker.municipality(),
+            "artist": self.faker.name_nonbinary(),
+            "album": self.faker.sentence(3),
+            "duration": self.faker.time_delta().total_seconds()
         })
 
     @task(5)
@@ -78,11 +80,10 @@ class UserBehavior(TaskSet):
     @task(6)
     def create_user(self):
         """Criar um novo usuário."""
-        email = f"{self.random_string()}@example.com"
         self.client.post("/users", json={
-            "name": f"New Locust User {self.random_string()}",
-            "email": email,
-            "password": self.random_string()
+            "name": self.faker.name(),
+            "email": self.faker.email(),
+            "password": self.faker.password()
         })
 
     @task(7)
@@ -90,9 +91,9 @@ class UserBehavior(TaskSet):
         """Atualizar um usuário existente."""
         user_id = 1
         self.client.put(f"/users/{user_id}", json={
-            "name": f"Updated Locust User {self.random_string()}",
-            "email": f"updatedlocust{self.random_string()}@example.com",
-            "password": self.random_string()
+            "name": self.faker.name(),
+            "email": self.faker.email(),
+            "password": self.faker.password()
         })
 
     @task(8)
@@ -106,10 +107,10 @@ class UserBehavior(TaskSet):
         """Atualizar uma música existente."""
         song_id = 1
         self.client.put(f"/songs/{song_id}", json={
-            "title": f"Updated Locust Song {self.random_string()}",
-            "artist": f"Updated Locust Artist {self.random_string()}",
-            "album": f"Updated Locust Album {self.random_string()}",
-            "duration": random.randint(200, 400)
+            "title": self.faker.sentence(4),
+            "artist": self.faker.name_nonbinary(),
+            "album": self.faker.street_name(),
+            "duration": self.faker.time_delta().total_seconds()
         })
 
     @task(10)
@@ -117,6 +118,7 @@ class UserBehavior(TaskSet):
         """Excluir uma música existente."""
         song_id = 1
         self.client.delete(f"/songs/{song_id}")
+
 
 class WebsiteUser(HttpUser):
     tasks = [UserBehavior]
