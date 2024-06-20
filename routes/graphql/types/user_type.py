@@ -4,3 +4,4 @@ from models.user import User as UserModel
 class UserType(SQLAlchemyObjectType):
     class Meta:
         model = UserModel
+        fields = ("id", "name", "email", "nickname")

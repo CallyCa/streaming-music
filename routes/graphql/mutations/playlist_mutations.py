@@ -72,7 +72,31 @@ class PlaylistQuery(graphene.ObjectType):
         query = PlaylistType.get_query(info)
         return query.get(id)
 
+class RemoveSongFromPlaylist(graphene.Mutation):
+    class Arguments:
+        playlist_id = graphene.Int(required=True)
+        song_id = graphene.Int(required=True)
+
+    playlist = graphene.Field(lambda: PlaylistType)
+
+    @jwt_required_mutation
+    def mutate(self, info, playlist_id, song_id):
+        playlist = PlaylistModel.query.get(playlist_id)
+        if not playlist:
+            raise Exception('Playlist not found')
+
+        song = SongModel.query.get(song_id)
+        if not song:
+            raise Exception('Song not found')
+
+        if song in playlist.songs:
+            playlist.songs.remove(song)
+            db.session.commit()
+
+        return RemoveSongFromPlaylist(playlist=playlist)
+
 class PlaylistMutations(graphene.ObjectType):
     create_playlist = CreatePlaylist.Field()
     update_playlist = UpdatePlaylist.Field()
     delete_playlist = DeletePlaylist.Field()
+    remove_song_from_playlist = RemoveSongFromPlaylist.Field()
