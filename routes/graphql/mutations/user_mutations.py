@@ -8,17 +8,23 @@ from routes.graphql.types.user_type import UserType
 from routes.graphql.inputs.user_inputs import UserInput
 
 class CreateUser(graphene.Mutation):
+    """
+    Mutation to create a new user.
+
+    Attributes:
+        input (UserInput): The input data for the new user.
+        user (UserType): The newly created user.
+    """
     class Arguments:
         input = UserInput(required=True)
 
     user = graphene.Field(lambda: UserType)
 
-    @jwt_required_mutation
     def mutate(self, info, input):
         if UserModel.query.filter_by(email=input.email).first() or Auth.query.filter_by(email=input.email).first():
             raise Exception("Email already registered")
 
-        user = UserModel(name=input.name, email=input.email)
+        user = UserModel(name=input.name, email=input.email, nickname=input.nickname)
         db.session.add(user)
         db.session.commit()
 
@@ -29,6 +35,14 @@ class CreateUser(graphene.Mutation):
         return CreateUser(user=user)
 
 class UpdateUser(graphene.Mutation):
+    """
+    Mutation to update an existing user.
+
+    Attributes:
+        id (int): The ID of the user to update.
+        input (UserInput): The updated user data.
+        user (UserType): The updated user.
+    """
     class Arguments:
         id = graphene.Int(required=True)
         input = UserInput()
@@ -41,14 +55,16 @@ class UpdateUser(graphene.Mutation):
         if not user:
             raise Exception('User not found')
 
-        if 'name' in input and input.name != user.name:
+        if input.name and input.name != user.name:
             user.name = input.name
-        if 'email' in input and input.email != user.email:
+        if input.email and input.email != user.email:
             if UserModel.query.filter_by(email=input.email).first() or Auth.query.filter_by(email=input.email).first():
                 raise Exception("Email already registered")
             user.email = input.email
+        if input.nickname and input.nickname != user.nickname:
+            user.nickname = input.nickname
 
-        if 'password' in input:
+        if input.password:
             auth = Auth.query.filter_by(user_id=id).first()
             if auth and not auth.check_password(input.password):
                 auth.password = auth.set_password(input.password)
@@ -57,6 +73,13 @@ class UpdateUser(graphene.Mutation):
         return UpdateUser(user=user)
 
 class DeleteUser(graphene.Mutation):
+    """
+    Mutation to delete an existing user.
+
+    Attributes:
+        id (int): The ID of the user to delete.
+        ok (bool): Whether the deletion was successful.
+    """
     class Arguments:
         id = graphene.Int(required=True)
 

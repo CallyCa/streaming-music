@@ -1,6 +1,7 @@
 import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from models.song import Song
 from models.playlist import Playlist
 from extensions.extensions import db
 from schemas.playlist_schema import playlist_schema, playlists_schema
@@ -59,6 +60,38 @@ def get_playlist(id):
         logger.error(f"Playlist with id {id} not found")
         return jsonify({'error': 'Playlist not found'}), 404
     return jsonify(playlist_schema.dump(playlist)), 200
+
+@playlists_bp.route('/playlists/song/<int:song_id>', methods=['GET'])
+@jwt_required()
+def get_playlists_by_song(song_id):
+    """
+    Get a list of playlists containing a specific song by song ID.
+    ---
+    tags:
+      - Playlists
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: song_id
+        description: The ID of the song to retrieve playlists for
+        required: true
+        type: integer
+    responses:
+      200:
+        description: A list of playlists containing the song
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/Playlist'
+      404:
+        description: Song not found in any playlist
+    """
+    playlists = Playlist.query.join(Playlist.songs).filter(Song.id == song_id).all()
+    if not playlists:
+        logger.error(f"No playlists found containing song with id {song_id}")
+        return jsonify({'error': 'No playlists found containing this song'}), 404
+    return jsonify(playlists_schema.dump(playlists)), 200
 
 @playlists_bp.route('/playlists', methods=['POST'])
 @jwt_required()
@@ -202,3 +235,49 @@ def delete_playlist(id):
     db.session.commit()
     logger.info(f"Playlist with id {id} deleted successfully")
     return jsonify({'message': 'Playlist deleted successfully'}), 200
+
+@playlists_bp.route('/playlists/<int:id>/remove_song/<int:song_id>', methods=['DELETE'])
+@jwt_required()
+def remove_song_from_playlist(id, song_id):
+    """
+    Remove a song from a playlist.
+    ---
+    tags:
+      - Playlists
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: id
+        description: The ID of the playlist
+        required: true
+        type: integer
+      - in: path
+        name: song_id
+        description: The ID of the song to remove
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Song removed successfully from the playlist
+      404:
+        description: Playlist or song not found
+    """
+    playlist = Playlist.query.get(id)
+    if not playlist:
+        logger.error(f"Playlist with id {id} not found")
+        return jsonify({'error': 'Playlist not found'}), 404
+
+    song = Song.query.get(song_id)
+    if not song:
+        logger.error(f"Song with id {song_id} not found")
+        return jsonify({'error': 'Song not found'}), 404
+
+    if song not in playlist.songs:
+        logger.error(f"Song with id {song_id} is not in playlist with id {id}")
+        return jsonify({'error': 'Song not in playlist'}), 404
+
+    playlist.songs.remove(song)
+    db.session.commit()
+    logger.info(f"Song with id {song_id} removed from playlist with id {id} successfully")
+    return jsonify({'message': 'Song removed from playlist successfully'}), 200

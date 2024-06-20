@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from models.auth import Auth
 from models.user import User
 from extensions.extensions import db
-from factory.model_factory import ModelFactory
 from schemas.user_schema import user_schema, users_schema
 from marshmallow import ValidationError
 from logs.logging_config import logger
@@ -65,7 +64,7 @@ def get_user(id):
 @jwt_required()
 def create_user():
     """
-    Create a new user.
+    Add a nickname to an existing user.
     ---
     tags:
       - Users
@@ -76,39 +75,36 @@ def create_user():
     parameters:
       - in: body
         name: body
-        description: The user to create
+        description: The user details to update
         required: true
         schema:
           type: object
           properties:
-            name:
+            nickname:
               type: string
-              example: "John Doe"
-            email:
-              type: string
-              example: "john@example.com"
-            password:
-              type: string
-              example: "password123"
+              example: "CoolUser123"
     responses:
       201:
-        description: User created successfully
+        description: User updated successfully
         schema:
           $ref: '#/definitions/User'
     """
     try:
         data = request.get_json()
-        user_data = user_schema.load(data)
+        nickname = data.get('nickname')
     except ValidationError as err:
         logger.error(f"Validation error: {err.messages}")
         return jsonify(err.messages), 400
 
-    if User.query.filter_by(email=user_data['email']).first() or Auth.query.filter_by(email=user_data['email']).first():
-        logger.error(f"Email {user_data['email']} already registered")
-        return jsonify({"msg": "Email already registered"}), 400
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        logger.error(f"User with id {user_id} not found")
+        return jsonify({"msg": "User not found"}), 404
 
-    new_user = ModelFactory.create_user(user_data['name'], user_data['email'], user_data['password'])
-    return jsonify(user_schema.dump(new_user)), 201
+    user.nickname = nickname
+    db.session.commit()
+    return jsonify(user_schema.dump(user)), 201
 
 @users_bp.route('/users/<int:id>', methods=['PUT'])
 @jwt_required()
@@ -144,6 +140,9 @@ def update_user(id):
             password:
               type: string
               example: "password123"
+            nickname:
+              type: string
+              example: "CoolUser123"
     responses:
       200:
         description: User updated successfully
@@ -173,7 +172,9 @@ def update_user(id):
             return jsonify({"msg": "Email already registered"}), 400
         user.email = user_data['email']
         update_needed = True
-
+    if 'nickname' in user_data and user_data['nickname'] != user.nickname:
+        user.nickname = user_data['nickname']
+        update_needed = True
     if 'password' in user_data:
         auth = Auth.query.filter_by(user_id=id).first()
         if auth and not auth.check_password(user_data['password']):

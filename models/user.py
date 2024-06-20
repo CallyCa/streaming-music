@@ -21,11 +21,13 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    nickname = db.Column(db.String(128), nullable=True)
     auth = db.relationship('Auth', backref='user', uselist=False, cascade='all, delete-orphan')
 
-    def __init__(self, name, email):
+    def __init__(self, name, email, nickname=None):
         self.name = name
         self.email = email
+        self.nickname = nickname 
 
     def to_dict(self):
         """
@@ -36,5 +38,6 @@ class User(db.Model):
         return {
             'id': self.id,
             'name': self.name,
-            'email': self.email
+            'email': self.email,
+            'nickname': self.nickname
         }
