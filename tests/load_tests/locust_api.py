@@ -13,35 +13,46 @@ class LocustAPI(ABC):
     def register(self, name, email, password):
         pass
 
+    @abstractmethod
     def login(self, email, password):
         pass
 
+    @abstractmethod
     def create_user(self, name, email, password):
         pass
 
+    @abstractmethod
     def update_user(self, user_id, name, email, password):
         pass
 
+    @abstractmethod
     def delete_user(self, user_id):
         pass
 
+    @abstractmethod
     def get_users(self):
         pass
 
+    @abstractmethod
     def create_song(self, title, artist, album, duration):
         pass
 
+    @abstractmethod
     def update_song(self, song_id, title, artist, album, duration):
         pass
 
+    @abstractmethod
     def delete_song(self, song_id):
         pass
 
+    @abstractmethod
     def get_songs(self):
         pass
 
+    @abstractmethod
     def create_playlist(self, name):
         pass
 
+    @abstractmethod
     def get_playlists(self):
         pass

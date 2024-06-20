@@ -100,7 +100,12 @@ class UserBehavior(TaskSet):
     def update_user(self):
         """Atualizar um usuário existente."""
         users = self.api_client.get_users().json()
-        user_id = random.choice(users)["id"]
+        if users is list:
+            user_id = random.choice(users)["id"]
+        elif "data" in users:
+            user_id = random.choice(users["data"]["allUsers"])["id"]
+        else:
+            user_id = 0
         self.api_client.update_user(
             user_id,
             name=self.faker.name(),
@@ -112,14 +117,24 @@ class UserBehavior(TaskSet):
     def delete_user(self):
         """Excluir um usuário existente."""
         users = self.api_client.get_users().json()
-        user_id = random.choice(users)["id"]
+        if users is list:
+            user_id = random.choice(users)["id"]
+        elif "data" in users:
+            user_id = random.choice(users["data"]["allUsers"])["id"]
+        else:
+            user_id = 0
         self.api_client.delete_user(user_id)
 
     @task(1)
     def update_song(self):
         """Atualizar uma música existente."""
         songs = self.api_client.get_songs().json()
-        song_id = random.choice(songs)["id"]
+        if songs is list:
+            song_id = random.choice(songs)["id"]
+        elif "data" in songs:
+            song_id = random.choice(songs["data"]["allSongs"])["id"]
+        else:
+            song_id = 0
         self.api_client.update_song(
             song_id,
             title=self.faker.sentence(4),
@@ -132,7 +147,12 @@ class UserBehavior(TaskSet):
     def delete_song(self):
         """Excluir uma música existente."""
         songs = self.api_client.get_songs().json()
-        song_id = random.choice(songs)["id"]
+        if songs is list:
+            song_id = random.choice(songs)["id"]
+        elif "data" in songs:
+            song_id = random.choice(songs["data"]["allSongs"])["id"]
+        else:
+            song_id = 0
         self.api_client.delete_song(song_id)
 
 
