@@ -175,6 +175,20 @@ class LocustGraphQL(LocustAPI):
             '''
         })
 
+    def get_song(self, song_id):
+        return self.client.post("/grahpql", json={
+            "query": '''
+            query song($id: Int!) {
+                song (id: $id) {
+                    id, title, artist, album
+                }
+            }
+            ''',
+            "variables": {
+                "id": song_id
+            }
+        })
+
     def create_playlist(self, name, songs=None):
         if songs is None:
             songs = []
