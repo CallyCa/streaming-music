@@ -59,9 +59,15 @@ class LocustREST(LocustAPI):
     def get_songs(self):
         return self.client.get("/songs")
 
-    def create_playlist(self, name):
+    def get_song(self, song_id):
+        return self.client.get(f"/songs/{song_id}")
+
+    def create_playlist(self, name, songs=None):
+        if songs is None:
+            songs = []
         return self.client.post("/playlists", json={
-            "name": name
+            "name": name,
+            "songs": songs
         })
 
     def get_playlists(self):
