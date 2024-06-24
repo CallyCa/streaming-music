@@ -17,7 +17,7 @@ class RegisterUser(graphene.Mutation):
         if Auth.query.filter_by(email=input.email).first():
             raise Exception("Email already registered")
 
-        new_user = UserModel(name=input.name, email=input.email)
+        new_user = UserModel(name=input.name, email=input.email, nickname=input.nickname)
         db.session.add(new_user)
         db.session.commit()
 

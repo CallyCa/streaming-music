@@ -50,6 +50,10 @@ class LocustAPI(ABC):
         pass
 
     @abstractmethod
+    def get_song(self, song_id):
+        pass
+
+    @abstractmethod
     def create_playlist(self, name):
         pass
 

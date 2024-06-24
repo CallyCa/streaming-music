@@ -16,7 +16,8 @@ class CreatePlaylist(graphene.Mutation):
     @jwt_required_mutation
     def mutate(self, info, input):
         user_id = get_jwt_identity()
-        new_playlist = PlaylistModel(name=input.name, user_id=user_id)
+        songs = SongModel.query.filter(SongModel.id.in_(input.songs)).all()
+        new_playlist = PlaylistModel(name=input.name, user_id=user_id, songs=songs)
         db.session.add(new_playlist)
         db.session.commit()
 
