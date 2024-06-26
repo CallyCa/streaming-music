@@ -137,12 +137,15 @@ def create_playlist():
         return jsonify({"msg": "Missing JSON in request"}), 400
 
     name = data.get('name')
+    song_ids = data.get('songs')
     user_id = get_jwt_identity()
 
     if not name:
         return jsonify({"msg": "Missing playlist name"}), 400
 
-    new_playlist = Playlist(name=name, user_id=user_id)
+    songs = Song.query.filter(Song.id.in_(song_ids)).all()
+
+    new_playlist = Playlist(name=name, user_id=user_id, songs=songs)
     db.session.add(new_playlist)
     db.session.commit()
 

@@ -4,13 +4,14 @@ import os
 import random
 
 from faker import Faker
-from locust import HttpUser, TaskSet, task, between
+from locust import HttpUser, TaskSet, task, between, User
 
+from logs.logging_config import logger
 from tests.load_tests.locust_graphql import LocustGraphQL
 from tests.load_tests.locust_rest import LocustREST
 
 
-class UserBehavior(TaskSet):
+class BaseUserBehavior(TaskSet):
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -57,22 +58,11 @@ class UserBehavior(TaskSet):
         else:
             self.logger.info("Erro ao fazer login.")
 
-    @task(1)
-    def get_users(self):
-        """Obter a lista de usuários."""
-        self.api_client.get_users()
-
-    @task(3)
     def create_playlist(self):
         """Criar uma nova playlist."""
-        self.api_client.create_playlist(self.faker.sentence(3))
+        song_ids = random.choices(range(1, 4999), k=random.choice(range(10, 50)))
+        self.api_client.create_playlist(self.faker.sentence(3), song_ids)
 
-    @task(4)
-    def get_playlists(self):
-        """Obter a lista de playlists."""
-        self.api_client.get_playlists()
-
-    @task(5)
     def create_song(self):
         """Criar uma nova música."""
         self.api_client.create_song(
@@ -82,12 +72,6 @@ class UserBehavior(TaskSet):
             duration=self.faker.time_delta().total_seconds()
         )
 
-    @task(5)
-    def get_songs(self):
-        """Obter a lista de músicas."""
-        self.api_client.get_songs()
-
-    @task(2)
     def create_user(self):
         """Criar um novo usuário."""
         self.api_client.create_user(
@@ -96,7 +80,6 @@ class UserBehavior(TaskSet):
             password=self.faker.password()
         )
 
-    @task(1)
     def update_user(self):
         """Atualizar um usuário existente."""
         users = self.api_client.get_users().json()
@@ -113,7 +96,6 @@ class UserBehavior(TaskSet):
             password=self.faker.password()
         )
 
-    @task(1)
     def delete_user(self):
         """Excluir um usuário existente."""
         users = self.api_client.get_users().json()
@@ -125,7 +107,6 @@ class UserBehavior(TaskSet):
             user_id = 0
         self.api_client.delete_user(user_id)
 
-    @task(1)
     def update_song(self):
         """Atualizar uma música existente."""
         songs = self.api_client.get_songs().json()
@@ -143,7 +124,6 @@ class UserBehavior(TaskSet):
             duration=self.faker.time_delta().total_seconds()
         )
 
-    @task(1)
     def delete_song(self):
         """Excluir uma música existente."""
         songs = self.api_client.get_songs().json()
@@ -156,6 +136,58 @@ class UserBehavior(TaskSet):
         self.api_client.delete_song(song_id)
 
 
+class UserBehavior(BaseUserBehavior):
+
+    def try_stop(self):
+        if self.user.environment.stats.num_requests > 500:
+            self.user.environment.runner.quit()
+
+    @task(1)
+    def get_users(self):
+        """Obter a lista de usuários."""
+        self.api_client.get_users()
+        self.try_stop()
+
+    @task(5)
+    def get_playlists(self):
+        """Obter a lista de playlists."""
+        self.api_client.get_playlists()
+        self.try_stop()
+
+    @task(5)
+    def get_songs(self):
+        """Obter a lista de músicas."""
+        self.api_client.get_songs()
+        self.try_stop()
+
+
 class WebsiteUser(HttpUser):
     tasks = [UserBehavior]
-    wait_time = between(1, 1)
+    wait_time = between(0, 0)
+
+
+class AdminBehavior(BaseUserBehavior):
+
+    @task
+    def initialize_db(self):
+        logger.info("Criando dados do banco")
+        for i in range(0, 100):
+            self.create_user()
+        for i in range(0, 5000):
+            self.create_song()
+        for i in range(0, 500):
+            self.create_playlist()
+        self.user.environment.runner.quit()
+
+    def on_stop(self):
+        logger.info("on_stop AdminBehavior")
+
+
+# class AdminUser(HttpUser):
+#     """Usuário "Admin" que cria dados no banco.
+#     Número fixo de 1 usuário deste tipo.
+#     Sua única tarefa é executada, e ao final, ele é interrompido.
+#     """
+#     tasks = [AdminBehavior]
+#     fixed_count = 1
+#     wait_time = between(0, 0)
